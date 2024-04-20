@@ -1,4 +1,5 @@
 ip addr add 173.0.0.5/24 dev eth1
+ip addr add 100.0.0.2/24 dev eth2
 
 /usr/share/openvswitch/scripts/ovs-ctl --system-id=random start
 ovs-vsctl add-br gw
