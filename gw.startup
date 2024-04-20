@@ -4,6 +4,5 @@ ip addr add 100.0.0.2/24 dev eth2
 /usr/share/openvswitch/scripts/ovs-ctl --system-id=random start
 ovs-vsctl add-br gw
 ovs-vsctl add-port gw eth0
-ovs-vsctl add-port gw eth2
 
 ovs-vsctl set-controller gw tcp:173.0.0.100:6633
