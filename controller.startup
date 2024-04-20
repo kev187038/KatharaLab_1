@@ -1,0 +1,9 @@
+ip addr add 173.0.0.100/24 dev eth0
+
+apt-get update
+pip install networkx
+pip install numpy
+
+chmod +x /home/pox/pox.py
+
+mv -rf /home/pox ..
