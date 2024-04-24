@@ -30,41 +30,49 @@ class linkDiscovery():
 		self.switch_id = {}
 		self.id = 1
 		core.openflow.addListeners(self)
-		Timer(5, self.sendProbes, recurring=True)
+		Timer(15, self.sendProbes, recurring=True)
 
 	def _handle_ConnectionUp(self, event):
 		self.switch_id[self.id] = event.dpid
 		self.switches[event.dpid] = event.ofp.ports
-		# this flow rule allows to redirect the probe request to the controller
-		# if we don't handle the probe we will have a PacketIn anyway, so it's not mandatory
 		self.install_flow_rule(event.dpid)
-		print("Connection Up: " + dpidToStr(event.dpid) + ", " + str(self.id))
+		print("[In discovery_channel:] Connection Up: " + dpidToStr(event.dpid) + ", " + str(self.id))
 		self.id += 1
 
 	def _handle_PacketIn(self, event):
+		#print("[In discovery_channel:] Packet In Detected... ", end='')
 		eth_frame = event.parsed
 		if eth_frame.src == EthAddr("00:11:22:33:44:55"):
+			#print("[In discovery_channel:] it's a probe (Eth Addr Src is 00:11:22:33:44:55)")
 			eth_dst = eth_frame.dst.toStr().split(':')
-			sid1 = int(eth_dst[4])
+			sid1 = int(eth_dst[5][0])
 			dpid1 = self.switch_id[sid1]
-			port1 = int(eth_dst[5])
+			port1 = int(eth_dst[5][1])
 			dpid2 = event.dpid
-			sid2 = list(self.switch_id.keys())[list(self.switch_id.values()).index(dpid2)]
+			sid2 = ""
+			for port in self.switches[dpid2]:
+				if port.port_no == 65534:
+					sid2 = str(port.name[-1])
 			port2 = event.ofp.in_port
 			link = Link(sid1, sid2, dpid1, port1, dpid2, port2)
 			if link.name not in self.links:
 				self.links[link.name] = link
-				print("discovered new link: " + link.name)
+				print("[In discovery_channel:] discovered new link: " + link.name)
 				print(link.__dict__)
 
 	def sendProbes(self):
 		for sid in self.switch_id:
 			dpid = self.switch_id[sid]
+			name = ""
+			for port in self.switches[dpid]:
+				if port.port_no == 65534:
+					name = str(port.name[-1])
+
 			for port in self.switches[dpid]:
 				# the 65534 port connects the dataplane with the control plane
 				if port.port_no != 65534:
 					mac_src = EthAddr("00:11:22:33:44:55")
-					mac_dst = EthAddr("00:00:00:00:" + str(sid) + ":" + str(port.port_no))
+					mac_dst = EthAddr("00:00:00:00:00:" + name + "" + str(port.name[-1]))
 					ether = ethernet()
 					ether.type = ethernet.ARP_TYPE
 					ether.src = mac_src

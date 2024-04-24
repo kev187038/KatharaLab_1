@@ -10,13 +10,13 @@ from pox.lib.packet.lldp import lldp
 from pox.lib.util import dpidToStr
 
 class HostTracked (Event):
-    def __init__ (self, interface):
+    def __init__ (self, packet):
         Event.__init__(self)
-        self.interface = interface
+        self.packet = packet
 
 class HostTracking (EventMixin):
 
-    _eventMixin_events = set( [ HostTracked ])
+    _eventMixin_events = set([HostTracked])
 
     def __init__(self):
         self.position_tracking = None
@@ -33,10 +33,14 @@ class HostTracking (EventMixin):
             interface = linksList[l].port1
             addresses.append("00:00:00:00:00:" + str(sid) +""+ str(interface))
 
+
+        print(f"addresses {addresses}")
+
         if packet.src not in addresses:
+            print(f"packet.src = {packet.src}")
             self.position = (packet.src.toStr(), packet.src.toStr().split(':')[5][0], packet.src.toStr().split(':')[5][1])
             print(f"Mobile host is connected to S{packet.src.toStr().split(':')[5][0]}, on the interface {packet.src.toStr().split(':')[5][1]} ")
-            self.raiseEvent(UserIsMoving(packet.src.toStr().split(':')[5][0], packet.src.toStr().split(':')[5][1], packet))
+            self.raiseEvent(HostTracked(packet))
           
         return        
             

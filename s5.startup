@@ -1,8 +1,10 @@
+# this is the gateway
+
 ip addr add 173.0.0.5/24 dev eth1
 ip addr add 100.0.0.2/24 dev eth2
 
 /usr/share/openvswitch/scripts/ovs-ctl --system-id=random start
-ovs-vsctl add-br gw
-ovs-vsctl add-port gw eth0
+ovs-vsctl add-br s5
+ovs-vsctl add-port s5 eth0
 
-ovs-vsctl set-controller gw tcp:173.0.0.100:6633
+ovs-vsctl set-controller s5 tcp:173.0.0.100:6633
