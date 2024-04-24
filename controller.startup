@@ -5,5 +5,3 @@ pip install networkx
 pip install numpy
 
 chmod +x /home/pox/pox.py
-
-mv -rf /home/pox ..
