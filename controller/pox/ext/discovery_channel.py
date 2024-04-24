@@ -8,7 +8,7 @@ from pox.lib.packet.ethernet import ethernet
 from pox.lib.packet.arp import arp
 from pox.lib.packet.lldp import lldp
 from pox.lib.util import dpidToStr
-import numpy as np
+#import numpy as np
 
 
 class Link():
@@ -75,25 +75,25 @@ class linkDiscovery():
 					msg.actions.append(of.ofp_action_output(port = port.port_no))
 					core.openflow.sendToDPID(dpid, msg)
 
-	def getGraph(self, previousPath):
-		N = len(self.switches)
-		adj = np.zeros((N, N))
+	# def getGraph(self, previousPath):
+	# 	N = len(self.switches)
+	# 	adj = np.zeros((N, N))
 
-		if previousPath is not None:
-			for link in self.links:
-				if link in previousPath:
-					adj[self.links[link].sid1, self.links[link].sid2] = 1
-				elif any(node in link for node in previousPath):
-					adj[self.links[link].sid1, self.links[link].sid2] = 2
-				else:
-					adj[self.links[link].sid1, self.links[link].sid2] = 3
+	# 	if previousPath is not None:
+	# 		for link in self.links:
+	# 			if link in previousPath:
+	# 				adj[self.links[link].sid1, self.links[link].sid2] = 1
+	# 			elif any(node in link for node in previousPath):
+	# 				adj[self.links[link].sid1, self.links[link].sid2] = 2
+	# 			else:
+	# 				adj[self.links[link].sid1, self.links[link].sid2] = 3
 
-		else:
-			for link in self.links:
-				adj[self.links[link].sid1, self.links[link].sid2] = 1
+	# 	else:
+	# 		for link in self.links:
+	# 			adj[self.links[link].sid1, self.links[link].sid2] = 1
 
-		graph = nx.from_numpy_matrix(np.where(adj > 0, 1, 0))
-		return graph
+	# 	graph = nx.from_numpy_matrix(np.where(adj > 0, 1, 0))
+	# 	return graph
 
 
 	def install_flow_rule(self, dpid):
