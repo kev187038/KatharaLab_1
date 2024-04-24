@@ -34,10 +34,10 @@ class HostTracking (EventMixin):
             addresses.append("00:00:00:00:00:" + str(sid) +""+ str(interface))
 
 
-        print(f"addresses {addresses}")
+        #print(f"addresses {addresses}")
 
         if packet.src not in addresses:
-            print(f"packet.src = {packet.src}")
+            #print(f"packet.src = {packet.src}")
             self.position = (packet.src.toStr(), packet.src.toStr().split(':')[5][0], packet.src.toStr().split(':')[5][1])
             print(f"Mobile host is connected to S{packet.src.toStr().split(':')[5][0]}, on the interface {packet.src.toStr().split(':')[5][1]} ")
             self.raiseEvent(HostTracked(packet))
