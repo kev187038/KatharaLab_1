@@ -8,7 +8,6 @@ from pox.lib.packet.ethernet import ethernet
 from pox.lib.packet.arp import arp
 from pox.lib.packet.lldp import lldp
 from pox.lib.util import dpidToStr
-#import networkx as nx
 import numpy as np
 
 
