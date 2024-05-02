@@ -14,7 +14,7 @@ from pox.lib.util import dpidToStr
 class Link():
 
 	def __init__(self, sid1, sid2, dpid1, port1, dpid2, port2, mac1, mac2):
-		self.name = str(sid1) + "_" + str(sid2)
+		self.name = "s" + str(sid1) + "_" + "s" + str(sid2)
 		self.sid1 = sid1
 		self.sid2 = sid2
 		self.dpid1 = dpidToStr(dpid1)
@@ -23,8 +23,10 @@ class Link():
 		self.port2 = int(port2)
 		self.mac1 = mac1
 		self.mac2 = mac2
-		self.name1 = "s"+str(sid1)
-		self.name2 = "s"+str(sid2)
+		self.name1 = "s" + str(sid1)
+		self.name2 = "s" + str(sid2)
+		self.raw_dpid1 = dpid1
+		self.raw_dpid2 = dpid2
 
 class linkDiscovery():
 
@@ -34,7 +36,7 @@ class linkDiscovery():
 		self.switch_id = {} # <key: a progressive ID; value: the dpid of the switch>
 		self.switch_MACs = {}
 		core.openflow.addListeners(self)
-		Timer(15, self.sendProbes, recurring=True)
+		Timer(15, self.sendProbes, recurring=False)
 		
 
 	def _handle_ConnectionUp(self, event):
@@ -88,7 +90,7 @@ class linkDiscovery():
 			link = Link(sid1, sid2, dpid1, port1, dpid2, port2, mac1, mac2)
 			dpid1 = dpidToStr(dpid1)
 			dpid2 = dpidToStr(dpid2)
-			#print(f"Added link s{sid1}-s{sid2} with ports {port1}-{port2} and macs {mac1}---{mac2} and dpids {dpid1}  {dpid2}\n")
+			print(f"Added link s{sid1}-s{sid2} with ports {port1}-{port2} and macs {mac1}---{mac2} and dpids {dpid1}  {dpid2}\n")
 			if link.name not in self.links:
 				self.links[link.name] = link
 				

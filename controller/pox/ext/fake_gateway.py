@@ -1,70 +1,76 @@
 import pox
 from pox.lib.revent import *
-
-from pox.core import core                     # Main POX object
-import pox.openflow.libopenflow_01 as of      # OpenFlow 1.0 library
-import pox.lib.packet as pkt                  # Packet parsing/construction
-from pox.lib.addresses import EthAddr, IPAddr # Address types
-import pox.lib.util as poxutil                # Various util functions
-import pox.lib.revent as revent               # Event library
-import pox.lib.recoco as recoco               # Multitasking library
+from pox.core import core 
+import pox.openflow.libopenflow_01 as of 
+import pox.lib.packet as pkt    
+from pox.lib.addresses import EthAddr, IPAddr 
+import pox.lib.util as poxutil               
+import pox.lib.revent as revent               
+import pox.lib.recoco as recoco              
 from pox.lib.revent.revent import Event
 from pox.lib.revent.revent import EventMixin
-from pox.lib.util import dpid_to_str
+from pox.lib.util import dpidToStr
 from pox.lib.packet import arp
 
-
-class FakeGateway(EventMixin):
+class Fake_GateWay(EventMixin):
 
   def __init__(self):
-    self.GW_MAC = ""
+    self.GW_MAC = "" #Gateway MAC
     core.openflow.addListeners(self)
+    self.gw_connection = None
 
   def _handle_ConnectionUp (self, event):
-    print("[in fake gateway:] in _handle_ConnectionUp")
-
+    
+    #Extract from discovery module the dpid and connection of gateway
     for port in event.ofp.ports:
-      gw_ports = [port for port in event.ofp.ports if port.name == "s5"]
-      if len(gw_ports) > 0:
-        non_gw_ports = [port for port in event.ofp.ports if port.name != "s5"]
-        self.GW_MAC = non_gw_ports[0].hw_addr
+      if port.name == "s5":
+        self.gw_connection = event.connection
+        # if the list contains gw there is the other interface
+        # that is the one we are interested in
+
+        # there are only 2 elements in this list
+        #print("number of elements in ports:" + str(len(event.ofp.ports)))
+        for port in event.ofp.ports:
+          if port.name != "s5":
+            self.GW_MAC = port.hw_addr
+  
 
   def _handle_PacketIn (self, event):
-    print("[in fake gateway:] in _handle_PacketIn")
 
     packet = event.parsed
     arp_packet = packet.find('arp')
-
-    if arp_packet is None:
-      log.warning("No ARP packet found")
-      return
-
-    if arp_packet.opcode == arp.REQUEST:
-      # Handle ARP request 
-      arp_reply = arp() 
-      arp_reply.hwsrc = self.GW_MAC 
-      arp_reply.hwdst = arp_packet.hwsrc 
-      arp_reply.opcode = arp.REPLY 
-      #arp_reply.protosrc = arp_packet.protodst 
-      #arp_reply.protodst = arp_packet.protosrc 
-      ether = pkt.ethernet() 
-      ether.type = pkt.ethernet.ARP_TYPE 
-      ether.dst = arp_packet.hwsrc 
-      ether.src = self.GW_MAC
-      ether.payload = arp_reply 
-      msg = of.ofp_packet_out() 
-      msg.data = ether.pack() 
-      msg.actions.append(of.ofp_action_output(port = event.port)) 
-      msg.in_port = event.port 
-      event.connection.send(msg)
-      print("packet sent!")
     
-    return
+    if not arp_packet:
+    	return
 
-
+    #This is for arp only
+    if arp_packet.opcode != arp.REQUEST:
+      return
+      
+  
+    
+    #Handle ARP request by responding with arp reply
+    arp_reply = arp() 
+    arp_reply.hwsrc = self.GW_MAC 
+    arp_reply.hwdst = packet.src
+    arp_reply.protosrc = arp_packet.protodst 
+    arp_reply.protodst = arp_packet.protosrc 
+    arp_reply.opcode = arp.REPLY 
+     
+    ether = pkt.ethernet() 
+    ether.type = pkt.ethernet.ARP_TYPE 
+    ether.dst = packet.src 
+    ether.src = self.GW_MAC
+    ether.payload = arp_reply 
+    
+    msg = of.ofp_packet_out() 
+    msg.data = ether.pack() 
+    msg.actions.append(of.ofp_action_output(port = event.port))
+    event.connection.send(msg)
+    
+    print("Answered ARP request.")
 
 def launch ():
-  print("[in fake gateway:] launch function activated... ")
-  fake_gateway = FakeGateway()
-  core.register("fake_gateway", fake_gateway)
+  fake_gateway = Fake_GateWay()
+  core.register("Fake_GateWay", fake_gateway)
 
