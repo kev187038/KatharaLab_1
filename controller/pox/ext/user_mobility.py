@@ -285,8 +285,23 @@ class UserMobility:
 		src_addr = packet.src
 		
 		#If the packet is not coming from the host do not do anything
-		if (src_addr != EthAddr("00:00:00:00:01:23") and src_addr != EthAddr("00:00:00:00:01:24") and src_addr != EthAddr("00:00:00:00:01:33") and src_addr != EthAddr("00:00:00:00:01:34")):
+		# if (src_addr != EthAddr("00:00:00:00:01:23") and src_addr != EthAddr("00:00:00:00:01:24") and src_addr != EthAddr("00:00:00:00:01:33") and src_addr != EthAddr("00:00:00:00:01:34")):
+		# 	return
+
+		linksList = core.linkDiscovery.links
+		addresses = ["00:11:22:33:44:55"]
+		
+		for l in linksList:
+			sid = linksList[l].sid1
+			interface = linksList[l].port1
+			addresses.append("00:00:00:00:00:" + str(sid) +""+ str(interface))
+
+
+        #print(f"[host_tracking:] addresses {addresses}")
+		
+		if packet.src in addresses:
 			return
+
 		if packet.find('ipv4') == None:
 			return
 
