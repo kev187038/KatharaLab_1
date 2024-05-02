@@ -61,9 +61,9 @@ class linkDiscovery():
 		eth_frame = event.parsed
 		if eth_frame.src == EthAddr("00:11:22:33:44:55"):
 			eth_dst = eth_frame.dst.toStr().split(':')#We have on the last number of MAC <SID|PORT of mac>
-			sid1 = int(eth_dst[5][0])
+			sid1 = int(eth_dst[5][1])
 			dpid1 = self.switch_id[sid1]
-			port1 = int(eth_dst[5][1])
+			port1 = int(eth_dst[5][0])
 			dpid2 = event.dpid
 			sid2 = ""
 			
@@ -108,7 +108,7 @@ class linkDiscovery():
 				# the 65534 port connects the dataplane with the control plane
 				if port.port_no != 65534:
 					mac_src = EthAddr("00:11:22:33:44:55")
-					mac_dst = EthAddr("00:00:00:00:00:" + name + "" + str(port.port_no))  
+					mac_dst = EthAddr("00:00:00:00:00:" + "" + str(port.port_no) + "" + name)  
 					ether = ethernet()
 					ether.type = ethernet.ARP_TYPE
 					ether.src = mac_src
