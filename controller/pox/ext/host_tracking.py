@@ -34,7 +34,7 @@ class HostTracking (EventMixin):
             addresses.append("00:00:00:00:00:" + str(sid) +""+ str(interface))
 
 
-        #print(f"addresses {addresses}")
+        #print(f"[host_tracking:] addresses {addresses}")
 
         if packet.src not in addresses:
             #print(f"packet.src = {packet.src}")
