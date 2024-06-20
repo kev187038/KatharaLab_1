@@ -12,24 +12,19 @@ from pox.lib.revent.revent import EventMixin
 from pox.lib.util import dpidToStr
 from pox.lib.packet import arp
 
+#THE OBJECTIVE OF THIS MODULE IS TO ANSWER ARP REQUESTS SO THAT THE HOST AND THE INTERNET NODES CAN ACTUALLY COMMUNICATE AND ACCESS HIGHER LEVEL PROTOCOLS
 class Fake_GateWay(EventMixin):
 
   def __init__(self):
     self.GW_MAC = "" #Gateway MAC
     core.openflow.addListeners(self)
-    self.gw_connection = None
 
   def _handle_ConnectionUp (self, event):
     
     #Extract from discovery module the dpid and connection of gateway
     for port in event.ofp.ports:
       if port.name == "s5":
-        self.gw_connection = event.connection
-        # if the list contains gw there is the other interface
-        # that is the one we are interested in
-
-        # there are only 2 elements in this list
-        #print("number of elements in ports:" + str(len(event.ofp.ports)))
+        # there are only 2 elements in this list so we can discriminate by !=
         for port in event.ofp.ports:
           if port.name != "s5":
             self.GW_MAC = port.hw_addr
@@ -43,7 +38,7 @@ class Fake_GateWay(EventMixin):
     if not arp_packet:
     	return
 
-    #This is for arp only
+    #This is for arp requests only
     if arp_packet.opcode != arp.REQUEST:
       return
       
@@ -67,8 +62,6 @@ class Fake_GateWay(EventMixin):
     msg.data = ether.pack() 
     msg.actions.append(of.ofp_action_output(port = event.port))
     event.connection.send(msg)
-    
-    print("Answered ARP request.")
 
 def launch ():
   fake_gateway = Fake_GateWay()

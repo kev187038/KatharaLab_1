@@ -15,9 +15,11 @@ class Graph:
 	def __init__(self):
 		self.edges = [] 
 	
+	#Construct graph using edges list
 	def add_edges_from(self, l):
 		self.edges = l
 		
+	#Returns all nodes of graph
 	def nodes(self):
 		n = []
 		for e in self.edges:
@@ -26,7 +28,8 @@ class Graph:
 			elif e[1] not in n:
 				n.append(e[1])
 		return n
-		
+	
+	#Returns all edges of node <node>
 	def get_edges(self, node): 
 		edges = []
 		for n in self.nodes():
@@ -36,27 +39,28 @@ class Graph:
 				edges.append((n, node))
 		return edges
 		
+	#Does Dijkstra
 	def shortest_path(self, source, target):
 		print("SRC IS: ", source)
 		print("Target is: ", target)
-		#print("Edges are: ",self.edges)
 		distances = {}
+		
+		#Define initial distance costs
 		for node in self.nodes():
 			if node == source:
 				distances[node] = 0
 			else:
 				distances[node] = float('inf')
-
-		
 		predecessors = {}
 
 		
 		visited = set()
-
 		while visited != set(self.nodes()):
 		   
 			min_node = None
 			min_distance = float('inf')
+			
+			#Get min distance node if there is one and mark it as visited, when there isn't one it means the algorithm has finished
 			for node in self.nodes():
 				if node not in visited and distances[node] < min_distance:
 					min_node = node
@@ -65,25 +69,25 @@ class Graph:
 			if min_node is None:
 				break
 
-			visited.add(min_node)
-			edges = self.get_edges(min_node)
+			visited.add(min_node) #at the start visit node n0, then others that have minimal distance
+			edges = self.get_edges(min_node) #get node edges
 			
-		
+			#Get neighbors of current minimal distance node and update neighbours distances and predecessors of neighbours will be the current min distance node (we use that to retrieve the path at the end)
 			for edge in edges:
 				neighbor = edge[1] if edge[0] == min_node else edge[0]
 				new_distance = distances[min_node] + 1  
 				if new_distance < distances[neighbor]:
 					distances[neighbor] = new_distance
 					predecessors[neighbor] = min_node
-		#print("Predecessors are: ",predecessors)
-		
+		#Finally construct Shortest Path
 		shortest_path = []
-		current_node = target
+		current_node = target 
+		#Reconstruct path from target to source
 		while current_node != source:
 			if current_node not in predecessors:
-				return None 
+				return None #No path could be found (never happens in our case)
 			shortest_path.insert(0, current_node)
-			current_node = predecessors[current_node]
+			current_node = predecessors[current_node] #new current node will be predecessor of current node
 
 		shortest_path.insert(0, source) 
 
@@ -91,20 +95,20 @@ class Graph:
 
 class UserMobility:
 	
+	#Start reading from handle connection up to better understand the overall flow!
 	def __init__(self):
 		self.marked_nodes = []
 		core.openflow.addListeners(self)
 		self.switches = None #keys are all switches with a "Ports" list as value the main attributes of these "ports" are the name (s1,s2,...)
-		self.dpids = [] #list of all dpids
 		self.links = [] #list of all link objects found by the other module
 		self.connections = {} #key is dpid connection object is value
 		self.graph = None #abstracted graph
-		self.switch_MACs = None # dpid as key and list of (port, MAC) tuple of the switch
 		self.gw_dpid = None 
 		self.current_start_node = None
 		self.fake_host_mac = EthAddr("11:22:33:44:55:66") #This fake addr is the "host" mac matched by all flow rules in the path in the internal SDN network
 		self.current_shortest_path = []
-		
+	
+	#Installs a flow rule that redirects packets from dl_addr source to out_port
 	def install_flow_rule(self, out_port, dl_addr, conn):
 		msg = of.ofp_flow_mod()
 		msg.priority = 50000
@@ -113,11 +117,14 @@ class UserMobility:
 		action = of.ofp_action_output(port=out_port) #redirect packet on out_port
 		msg.actions.append(action)
 		conn.send(msg)
-			
+		
+	#function to install flow rules in the correct order		
 	def sort_and_install(self, sp):
+		#OVERALL IDEA: ANALYZE NODES OF THE SHORTEST PATH ONE AT A TIME AND INSTALL THE FLOW RULES BY GETTING THE CORRECT PORTS
+		#MACS ARE FAKE AND FIXED FOR 
 		for i in range(1, len(sp)-1): #exclude Access point and gateway that need to be configured separately
 
-			#Use self.events to extract the link, we analyze prev<->curr<->next nodes
+			#We analyze prev<->curr<->next nodes, where if prev is the host, it's not considered
 			prev = None
 			if (i - 1 >= 0):
 				prev = sp[i-1]
@@ -132,20 +139,20 @@ class UserMobility:
 					break
 			
 			prev_curr = None
-			#Get link representing prev<->next
+			#Get link representing prev<->curr
 			for link in self.links:
 				if link.name1 == prev and link.name2 == curr:
 					prev_curr = link
-					break
+					break #if prev is host this remains None
 			
 			if curr_next == None:
 				print("Error links not found")
 				exit(1) #should not happen
 
-			#We get the <-curr-> ports directions and MACs to match for the rules, especially MAC of host
-			h_mac = self.fake_host_mac
+			#We get the <-curr-> ports directions in the shortest path and declare MACs to match for the rules, especially MAC of host
+			h_mac = self.fake_host_mac #The networks sees the MAC of the host as a fake address
 			if prev_curr == None:
-				#This means we have the host as prev
+				#This means we have the host as previous node in the shortest path
 				port_out_to_prev = event.port
 				print(f"Dealing with host with mac {h_mac} and port to it {port_out_to_prev}")
 			else:
@@ -171,16 +178,16 @@ class UserMobility:
 				
 			#Install flow rules for curr -> next and next -> curr packet exchange		 
 			self.install_flow_rule(port_out, h_mac, conn) #From curr to next we match the fake address (won't be changed on update)
-			self.install_flow_rule(port_out_to_prev, dst_mac, conn) #From next back to curr we match outer web address (again, won't be changed either on path change)
+			self.install_flow_rule(port_out_to_prev, dst_mac, conn) #From next back to curr we match outer web address (again, won't be changed either on path change, as these MACs are the fixed Matched macs)
 			print(f"Installed flow rule on {curr} to redirect packet on output port {port_out} when receiving it from MAC address {h_mac}")
 			print(f"Installed flow rule on {curr} to redirect packet on output port {port_out_to_prev} when receiving it from MAC address {dst_mac}\n")
-
+	
+	#Handle gateway separately: it's flow rules are always the same, we configure it once
 	def gateway_rules_install(self, sp):
-		#Handle gateway separately
 		gw = sp[-1]
 		l = None
 		for link in self.links:
-			if link.name2 == gw: #link (s2, gw) (s5)
+			if link.name2 == gw: #link (s2, s5)
 				l = link
 				break
 		conn = None
@@ -197,8 +204,8 @@ class UserMobility:
 		match = of.ofp_match(in_port=port) 
 		msg.match = match
 		change_mac = of.ofp_action_dl_addr.set_dst(EthAddr("00:00:00:00:00:11")) #Change mac to Internet mac so that internet node will accept the packet
-		#postilla, bisogna aggiornare per impedire al gw di fare redirect delle arp request del nodo int (opzionale, non dà problemi)
-		action = of.ofp_action_output(port=2) #redirect packet on out_port
+		
+		action = of.ofp_action_output(port=2) #Redirect packet on out_port
 		msg.actions.append(change_mac)
 		msg.actions.append(action)
 		conn.send(msg)
@@ -210,10 +217,10 @@ class UserMobility:
 		msg2.match = match2
 		change_mac2 = of.ofp_action_dl_addr.set_src(self.fake_host_mac)  #Change mac to host mac to have the flow rules work
 		action2 = of.ofp_action_output(port=port)
-		#msg2.actions.append(change_mac2)
 		msg2.actions.append(action2)
 		conn.send(msg2)
-		
+	
+	#Access point flow rules are different, they need to account for the host	
 	def AP_rules_install(self, event, sp):
 		ap = sp[0] #access point is always first node of sp
 		next = sp[1]
@@ -275,7 +282,8 @@ class UserMobility:
 		msg = of.ofp_flow_mod()
 		msg.command = of.OFPFC_DELETE #of.ofp_flow_mod_command.OFPFC_DELETE
 		conn.send(msg)
-			 		
+	
+	#Start of the code workflow		 		
 	def _handle_ConnectionUp(self, event):
 		dpid = event.dpid
 		self.connections[dpid] = event.connection
@@ -283,42 +291,31 @@ class UserMobility:
 	def _handle_PacketIn(self, event):
 		packet = event.parsed
 		src_addr = packet.src
-		
-		#If the packet is not coming from the host do not do anything
-		# if (src_addr != EthAddr("00:00:00:00:01:23") and src_addr != EthAddr("00:00:00:00:01:24") and src_addr != EthAddr("00:00:00:00:01:33") and src_addr != EthAddr("00:00:00:00:01:34")):
-		# 	return
-
 		linksList = core.linkDiscovery.links
 		addresses = ["00:11:22:33:44:55"]
 		
+		#Get the links addresses of the switches!
 		for l in linksList:
 			sid = linksList[l].sid1
 			interface = linksList[l].port1
 			addresses.append("00:00:00:00:00:" + str(sid) +""+ str(interface))
-
-
-        #print(f"[host_tracking:] addresses {addresses}")
 		
+		#Only the host packets will trigger a change, not the switches ones!
 		if packet.src in addresses:
-			return
+			return 
 
 		if packet.find('ipv4') == None:
-			return
+			return #fake gateway handles ARP
 
 		print("Event raised by, ",dpidToStr(event.connection.dpid))
 		
-		#FIRST TIME ROUTING INITIALIZATION
-		#GET GRAPH AND ALL THE RELEVANT STRUCTURES IF it's the first routing
+		#CASE 1: FIRST TIME ROUTING INITIALIZATION
+		#GET GRAPH AND ALL THE RELEVANT STRUCTURES IF IT'S THE FIRST ROUTING CONFIGURATION
 		if len(self.marked_nodes) == 0:
 			tup = core.linkDiscovery.getLinks()
 			self.switches = tup[0] #switches
 			for i in tup[1]:
 				self.links.append(tup[1][i]) #save all links
-			self.switch_MACs = tup[2] #dipd associated to a series of tuples (port, MAC of the port)
-			
-			#get dpid list from the discovery module
-			for k in tup[3].keys():
-				self.dpids.append(tup[3][k])
 			
 			#Create graph
 			links_ = []
@@ -327,7 +324,7 @@ class UserMobility:
 			self.graph = Graph()
 			self.graph.add_edges_from(links_)
 			
-			#Get gw dpid
+			#Get gateway dpid
 			for i in self.links:
 				if i.name1 == 's5':
 					self.gw_dpid = i.raw_dpid1
@@ -335,18 +332,18 @@ class UserMobility:
 			
 			#Get source node as the first switch the packet traverses
 			#The algorithm should assign flow rules for everyone with the first AP traversal
-			#We use names as h, s1, s2, r, etc... as identifiers of nodes
+			#We use names as s1, s2, etc... as identifiers of nodes
 			src = ''
 			for i in self.switches[event.dpid]:
 				if i.port_no == 65534:
 					src = i.name
 		
 			#Base case: no configured path exists, the internet is the goal, calculate shortest path to gateway
-			sp = self.graph.shortest_path(source=src, target='s5')
-			self.current_start_node = event.connection.dpid
+			sp = self.graph.shortest_path(source=src, target='s5') #get shortest path
+			self.current_start_node = event.connection.dpid #start is AP
 
 			print("Shortest path is: ", sp)
-			self.current_shortest_path = sp
+			self.current_shortest_path = sp #memorize shortest path for when we need to update it later
 				
 			#Install flow rules on all path nodes
 			self.sort_and_install(sp)
@@ -356,16 +353,17 @@ class UserMobility:
 				#mark nodes as configured
 				self.marked_nodes.append(i)
 					
-		#If the user just changed the interface but not the AP:
+		#CASE 2: USER CHANGED INTERFACE BUT NOT AP
 		elif event.connection.dpid == self.current_start_node:
 			print("User changed interface but not AP, reconfiguring only AP")
 			#We just reconfigure AP to handle the other interface instead
 			self.AP_wipe()
 			self.AP_rules_install(event, self.current_shortest_path)
-				
+		
+		#CASE 3: USER CHANGED BOTH INTERFACE AND AP		
 		#If the user changed AP node we apply algorithm to find the less costly path in terms of rule reconfiguration	
 		#Cost modeling: the already configured path has cost 1, since it is already configured and we just need to reconfigure the initial node of the old path to accept from the new port the  packets, whilst every new node we have to configure on a path adds a cost of 1.
-		#The idea is to calculate the shortest path, and, if the sp uses the old path, then it will use as much of the old path as possible, since it's already configured
+		#The idea is to calculate the shortest path, and, if the sp uses the old path, then we readjust the new path so that it will use as much of the old path as possible, since it's already configured
 		else:
 			print("Recalculating path...")
 			#Get source node as the first switch the packet traverses
@@ -382,6 +380,7 @@ class UserMobility:
 					old_sp.append(i)
 			print("New sp is ", new_sp)
 			
+			#Old path was used
 			if len(old_sp) > 0:
 				self.AP_wipe() #Takes current AP on marked nodes and removes all rules, we remove rules on old AP
 				
@@ -391,7 +390,7 @@ class UserMobility:
 					if new not in self.marked_nodes:
 						path.append(new)
 				
-				linking_point = None
+				linking_point = None #earliest link between new and old path, self.marked_nodes and new_sp are ordered already
 
 				for n in self.marked_nodes:
 					for new in new_sp:
@@ -399,9 +398,9 @@ class UserMobility:
 						if (new, n) in graph.get_edges(n) and new not in self.marked_nodes and n in self.marked_nodes:
 							linking_point = (new, n)
 				
-				#Handle case in which new AP is part of the old path too
+				#Handle case in which new AP is too part of the old path (it was a switch in the old path): we just reuse AP 
 				if linking_point == None:
-					linking_point = (None, None) #In this case the sp calculated is the actual sp, we just neet to reconfigure the AP
+					linking_point = (None, None) #In this case the sp calculated is the actual adjusted sp, we just need to reconfigure the AP
 				else:
 					print("Linking point is ", linking_point)
 				
@@ -424,7 +423,8 @@ class UserMobility:
 						print("Path before sort is ", path)
 						self.sort_and_install(path) 
 						path += self.marked_nodes[i+2:] #We add rest of old path
-						break
+						break 
+						#All of this is ignored if new AP is part of old path
 						
 				print("Final path is ", path)
 				

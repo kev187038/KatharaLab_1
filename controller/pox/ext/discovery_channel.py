@@ -12,7 +12,7 @@ from pox.lib.util import dpidToStr
 
 
 class Link():
-
+	#Memorize all useful info in link object
 	def __init__(self, sid1, sid2, dpid1, port1, dpid2, port2, mac1, mac2):
 		self.name = "s" + str(sid1) + "_" + "s" + str(sid2)
 		self.sid1 = sid1
@@ -31,10 +31,10 @@ class Link():
 class linkDiscovery():
 
 	def __init__(self):
-		self.switches = dict() # <key: dpid; value: list of switch's ports>
-		self.links = {} # list of link objects
-		self.switch_id = {} # <key: a progressive ID; value: the dpid of the switch>
-		self.switch_MACs = {}
+		self.switches = dict() # <key: dpid; value: list of switch's ports> to handle send probes and extract SIDs
+		self.links = {} # list of link objects the final objective of the module is to populate this
+		self.switch_id = {} # <key: a progressive ID; value: the dpid of the switch> to send probes
+		self.switch_MACs = {} #<dpid : MAC> to get MACs to insert into the links more easily
 		core.openflow.addListeners(self)
 		Timer(15, self.sendProbes, recurring=False)
 		
@@ -54,13 +54,11 @@ class linkDiscovery():
 		self.switch_MACs[dpidToStr(event.dpid)] = []
 		for i in event.ofp.ports:
 			self.switch_MACs[dpidToStr(event.dpid)].append((i.port_no ,i.hw_addr))
-		#print("[In discovery_channel:] Connection Up: " + dpidToStr(event.dpid) + ", " + str(self.id))
 
 	def _handle_PacketIn(self, event):
-		#print("[In discovery_channel:] Packet In Detected... ", end='')
 		eth_frame = event.parsed
 		if eth_frame.src == EthAddr("00:11:22:33:44:55"):
-			eth_dst = eth_frame.dst.toStr().split(':')#We have on the last number of MAC <SID|PORT of mac>
+			eth_dst = eth_frame.dst.toStr().split(':') #We have on the last number of MAC <SID|PORT of mac>
 			sid1 = int(eth_dst[5][1])
 			dpid1 = self.switch_id[sid1]
 			port1 = int(eth_dst[5][0])
@@ -77,12 +75,12 @@ class linkDiscovery():
 			mac2 = None
 			for k in self.switch_MACs.keys():
 				if k == dpidToStr(dpid1):
-					#When we find dpid1 get mac 1
+					#When we find dpid1 get MAC 1
 					for j in self.switch_MACs[k]:
 						if j[0] == port1:
 							mac1 = j[1]
 				elif k == dpidToStr(dpid2):
-					#Same mac 2
+					#Same for MAC 2
 					for j in self.switch_MACs[k]:
 						if j[0] == port2:
 							mac2 = j[1]
@@ -97,6 +95,7 @@ class linkDiscovery():
 				
 	
 	def sendProbes(self):
+		#Send the probkes to discover channels
 		for sid in self.switch_id:
 			dpid = self.switch_id[sid]
 			name = ""

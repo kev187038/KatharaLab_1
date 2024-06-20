@@ -13,7 +13,8 @@ class HostTracked (Event):
     def __init__ (self, packet):
         Event.__init__(self)
         self.packet = packet
-
+        
+#KEEPS TRACK OF THE ACCESS POINT WHERE THE HOST IS CONNECTED
 class HostTracking (EventMixin):
 
     _eventMixin_events = set([HostTracked])
@@ -25,21 +26,22 @@ class HostTracking (EventMixin):
     
     def _handle_PacketIn(self, event):
         packet = event.parsed
-        linksList = core.linkDiscovery.links
+        linksList = core.linkDiscovery.links #Get links from discovery module
         addresses = ["00:11:22:33:44:55"]
-
+        
+	#Recreate list of all MAC addresses 
         for l in linksList:
             sid = linksList[l].sid1
             interface = linksList[l].port1
-            addresses.append("00:00:00:00:00:" + str(sid) +""+ str(interface))
+            res = "00:00:00:00:00:" + str(interface) + "" + str(sid)
+            if res not in addresses:
+            	addresses.append(res)
 
-
-        #print(f"[host_tracking:] addresses {addresses}")
-
+	#The host will be accessing the network from the AP MAC not present in the links
         if packet.src not in addresses:
-            #print(f"packet.src = {packet.src}")
+            print(packet.src)
             self.position = (packet.src.toStr(), packet.src.toStr().split(':')[5][1], packet.src.toStr().split(':')[5][0])
-            print(f"Mobile host is connected to S{packet.src.toStr().split(':')[5][0]}, on the interface {packet.src.toStr().split(':')[5][1]} ")
+            print(f"Mobile host is connected to S{packet.src.toStr().split(':')[5][1]}, on the interface {packet.src.toStr().split(':')[5][0]} ")
             self.raiseEvent(HostTracked(packet))
           
         return        
