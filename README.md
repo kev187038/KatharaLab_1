@@ -13,7 +13,7 @@ After loading the controller wait a bit for the links to be discovered! After th
  ping -I eth0/1/2/3 100.0.0.1
 ```
 and you should see the user_mobility and host_tracking modules in action, while fake_gateway will provide the necessary layer 2 support underneath. 
-IMPORTANT: whenever there is a change in flow search for "Event raised by" messages in the controller terminal, from there you can read how the whole event is handled. The host tracker
+IMPORTANT: whenever there is a change in flow search for "Event raised by" messages in the controller terminal, from there until the end of the log you can read how the whole event is handled. The host tracker
 will tell where the host is using "Host is connected to..." messages.
 
 # Second project
