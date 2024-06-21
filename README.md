@@ -10,7 +10,7 @@ Usual:
 Remember pox will be in ./pox. 
 After loading the controller wait a bit for the links to be discovered! After they are discovered (the controller will send some messages like "added link si-sj, ports ..."), you can start pinging the internet module from the host using the interfaces with
 ```bash
- ping -I eth0/1/2/3 -c <num_packets> 100.0.0.1
+ ping -I eth0/1/2/3 100.0.0.1
 ```
 and you should see the user_mobility and host_tracking modules in action, while fake_gateway will provide the necessary layer 2 support underneath. 
 
