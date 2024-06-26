@@ -298,7 +298,7 @@ class UserMobility:
 		for l in linksList:
 			sid = linksList[l].sid1
 			interface = linksList[l].port1
-			addresses.append("00:00:00:00:00:" + str(sid) +""+ str(interface))
+			addresses.append("00:00:00:00:00:" + str(interface) +""+ str(sid))
 		
 		#Only the host packets will trigger a change, not the switches ones!
 		if packet.src in addresses:
