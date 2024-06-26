@@ -397,6 +397,9 @@ class UserMobility:
 						#We link the first new path node we can find to the old path
 						if (new, n) in graph.get_edges(n) and new not in self.marked_nodes and n in self.marked_nodes:
 							linking_point = (new, n)
+							break
+					if linking_point:
+						break
 				
 				#Handle case in which new AP is too part of the old path (it was a switch in the old path): we just reuse AP 
 				if linking_point == None:
